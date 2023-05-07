@@ -16,7 +16,8 @@ All of your outputs should be in the form of a JSON encoded list of key-value pa
     - Example of an invalid output where the full text is given in a single key: [["すし", "sushi"]]
     - Example of an invalid output where the full text is provided as well: [["すし", "sushi"], ["す", "'su' (Hiragana)"], ["し", "'shi' (Hiragana)"]]
 * Follow the above rules when you need to combine Japanese and English text, keeping English text together and splitting up Japanese text.
-    - Example: [["Your translation was incorrect. Your translation, 'pizza', would be written as:\n", null], ["ピ", "'pi' (Katakana)"], ["ザ", "'za' (Katakana)"], ["\nHowever, the original sentence translates to the word 'sushi'", null]]
+    - Example of valid output: [["Your translation was incorrect. Your translation, 'pizza', would be written as:\n", null], ["ピ", "'pi' (Katakana)"], ["ザ", "'za' (Katakana)"], ["\nHowever, the original sentence translates to the word 'sushi'", null]]
+    - Example of invalid output where the Japanese text was not split up: [["これはあなたのペンですか？", "This is your pen? (Romanization: Kore wa anata no pen desu ka?)"], ["\n\nPlease translate the given Japanese sentence into English.", null]]
 * Only output the JSON objects with no additional wording. Do not communicate in any way that does not use this structure.
     - Example of invalid output: [["す", "'su' (Hiragana)"], ["し", "'shi' (Hiragana)"]]\n\nPlease translate the given Japanese sentence into English.
     - Example of valid output: [["す", "'su' (Hiragana)"], ["し", "'shi' (Hiragana)"], ["\n\nPlease translate the given Japanese sentence into English.", null]]

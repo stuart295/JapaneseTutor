@@ -67,13 +67,14 @@ class JapanesePracticeApp(tk.Tk):
             self.send_button.config(state='disabled')
 
     def send_message(self, event=None):
+        message = self.chat_input.get()
+        self.chat_input.delete(0, tk.END)
+
         # Disable the input and button
         self.set_input_enabled(False)
 
         # Display user input in log
-        message = self.chat_input.get()
         self.show_student_response(message)
-        self.chat_input.delete(0, tk.END)
 
         # Get and show tutor response
         response = self.tutor.speak(message)
@@ -82,14 +83,20 @@ class JapanesePracticeApp(tk.Tk):
         # Re-enable the input and button
         self.set_input_enabled(True)
 
-    def show_tutor_response(self, response: list[list]):
-        message = ''.join(text for text, info in response)
+    def show_tutor_response(self, response: list):
         self.chat_log.configure(state="normal")
         self.chat_log.insert(tk.END, "Tutor\n", "bold")
-        self.chat_log.insert(tk.END, f"{message}\n\n", "tag_ai")
 
-        self.chat_log.tag_bind("tag_ai", "<Button-1>", self.show_info_bubble)
+        for index, item in enumerate(response):
+            character, info = item
+            tag_name = f"tag_ai_{index}"
+            self.chat_log.insert(tk.END, character, tag_name)
+            self.chat_log.tag_bind(tag_name, "<Button-1>", self.show_info_bubble)
+            self.chat_log.tag_config(tag_name, font=("Helvetica", 14))
+
+        self.chat_log.insert(tk.END, "\n\n")
         self.chat_log.configure(state="disabled")
+        self.current_response = response
 
     def show_student_response(self, message: str):
         self.chat_log.configure(state="normal")
@@ -99,11 +106,11 @@ class JapanesePracticeApp(tk.Tk):
         self.chat_log.configure(state="disabled")
 
     def show_info_bubble(self, event):
-        self.chat_log.configure(state="normal")
-        word = self.chat_log.get(tk.CURRENT)
-        word = re.sub('[^\w]', '', word)
+        clicked_tag = self.chat_log.tag_names(tk.CURRENT)[0]
+        tag_index = int(clicked_tag.split("_")[-1])
+        _, info_text = self.current_response[tag_index]
 
-        if word:
+        if info_text:
             try:
                 self.bubble.destroy()
             except AttributeError:
@@ -112,9 +119,9 @@ class JapanesePracticeApp(tk.Tk):
             x, y, _, _ = self.chat_log.bbox(tk.CURRENT)
             x += self.chat_log.winfo_rootx()
             y += self.chat_log.winfo_rooty()
-            info_text = f"Info for {word}"
 
             self.bubble = WordBubble(self, x, y - 30, info_text)
+
         self.chat_log.configure(state="disabled")
 
 
