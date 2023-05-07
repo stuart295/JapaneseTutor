@@ -123,7 +123,12 @@ class JapanesePracticeApp(tk.Tk):
 
     def show_info_bubble(self, event):
         clicked_tag = self.chat_log.tag_names(tk.CURRENT)[0]
-        tag_index = int(clicked_tag.split("_")[-1])
+        tag_index_str = clicked_tag.split("_")[-1]
+        if not tag_index_str.isdigit():
+            print(f"Invalid tag: {clicked_tag}")
+            return
+
+        tag_index = int(tag_index_str)
         _, info_text = self.current_response[tag_index]
 
         if info_text:

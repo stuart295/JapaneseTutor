@@ -26,10 +26,11 @@ python main.py
 ```
 
 ## Current issues
+* GPT4 sometimes makes mistakes with translations. Might need to switch to or wait for a more specialised model.
+* If the user disagrees with the agent too much, it can respond with outputs that do not follow the required format.
 * GPT4 sometimes gets hung up on direct translations.
 
 ## To do
-* The correctness of GPT4's translations needs to be verified.
 * The system prompt needs a second pass.
 * Flesh out and validate the stats tracking system.
 * Standardise the format of the info bubbles. 

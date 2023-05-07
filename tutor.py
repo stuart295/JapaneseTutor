@@ -7,7 +7,7 @@ import unicodedata
 class Tutor:
     _GPT_MODEL = "gpt-4"
     _STATS_PATH = 'stats.json'
-    _TEMPERATURE = 0.0
+    _TEMPERATURE = 0.8
 
     def __init__(self, openai_key):
         openai.api_key = openai_key
