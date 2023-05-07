@@ -7,12 +7,18 @@ from tutor import Tutor
 
 
 class WordBubble(tk.Toplevel):
-    def __init__(self, master, x, y, text):
+    def __init__(self, master, x, y, text, reset_tag):
         super().__init__(master)
         self.geometry(f"+{x}+{y}")
         self.overrideredirect(1)
+        self.reset_tag = reset_tag
 
         ttk.Label(self, text=text, background="white", relief="solid", borderwidth=1).pack(padx=5, pady=5)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def on_close(self):
+        self.reset_tag()
+        self.destroy()
 
 
 class JapanesePracticeApp(tk.Tk):
@@ -26,6 +32,8 @@ class JapanesePracticeApp(tk.Tk):
         self.geometry("1280x720")
 
         self.create_widgets()
+
+        self.current_highlighted_tag = None
 
         # Start the lesson
         threading.Thread(target=self.begin_lesson).start()
@@ -83,9 +91,16 @@ class JapanesePracticeApp(tk.Tk):
         # Re-enable the input and button
         self.set_input_enabled(True)
 
+    def clear_previous_tags(self):
+        for tag in self.chat_log.tag_names():
+            if tag.startswith("tag_ai_"):
+                self.chat_log.tag_delete(tag)
+
     def show_tutor_response(self, response: list):
         self.chat_log.configure(state="normal")
         self.chat_log.insert(tk.END, "Tutor\n", "bold")
+
+        self.clear_previous_tags()
 
         for index, item in enumerate(response):
             character, info = item
@@ -111,6 +126,10 @@ class JapanesePracticeApp(tk.Tk):
         _, info_text = self.current_response[tag_index]
 
         if info_text:
+            # Reset the background color of the previously highlighted tag
+            if self.current_highlighted_tag:
+                self.chat_log.tag_config(self.current_highlighted_tag, background="")
+
             try:
                 self.bubble.destroy()
             except AttributeError:
@@ -120,7 +139,14 @@ class JapanesePracticeApp(tk.Tk):
             x += self.chat_log.winfo_rootx()
             y += self.chat_log.winfo_rooty()
 
-            self.bubble = WordBubble(self, x, y - 30, info_text)
+            def reset_tag():
+                self.chat_log.tag_config(clicked_tag, background="")
+
+            self.bubble = WordBubble(self, x, y - 30, info_text, reset_tag)
+            self.chat_log.tag_config(clicked_tag, background="yellow")
+
+            # Update the currently highlighted tag
+            self.current_highlighted_tag = clicked_tag
 
         self.chat_log.configure(state="disabled")
 
