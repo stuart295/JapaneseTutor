@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk, TOP, NW
-import re
 import threading
 
 from tutor import Tutor
@@ -111,14 +110,16 @@ class JapanesePracticeApp(tk.Tk):
 
         self.chat_log.insert(tk.END, "\n\n")
         self.chat_log.configure(state="disabled")
+        self.chat_log.see(tk.END)
         self.current_response = response
+
 
     def show_student_response(self, message: str):
         self.chat_log.configure(state="normal")
         self.chat_log.insert(tk.END, "You\n", "bold")
         self.chat_log.insert(tk.END, f"{message}\n\n", "tag_you")
-        # self.chat_input.delete(0, tk.END)
         self.chat_log.configure(state="disabled")
+        self.chat_log.see(tk.END)
 
     def show_info_bubble(self, event):
         clicked_tag = self.chat_log.tag_names(tk.CURRENT)[0]
