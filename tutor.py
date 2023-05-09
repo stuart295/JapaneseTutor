@@ -6,8 +6,11 @@ import unicodedata
 
 class Tutor:
     _GPT_MODEL = "gpt-4"
-    _STATS_PATH = 'stats.json'
-    _TEMPERATURE = 0.8
+    _STATS_PATH = './data/stats.json'
+    _KANJI_PATH = './data/kanji_freq_list.txt'
+    _TEMPERATURE = 0.7
+
+
 
     def __init__(self, openai_key):
         openai.api_key = openai_key
