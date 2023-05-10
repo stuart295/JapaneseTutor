@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, TOP, NW
 import threading
 
-from tutor import Tutor
+from lesson_manager import LessonManager
 
 
 class WordBubble(tk.Toplevel):
@@ -25,7 +25,7 @@ class JapanesePracticeApp(tk.Tk):
         super().__init__()
 
         with open("openai_key", 'r') as f:
-            self.tutor = Tutor(f.read().strip())
+            self.lesson = LessonManager()
 
         self.title("Japanese Practice App")
         self.geometry("1280x720")
