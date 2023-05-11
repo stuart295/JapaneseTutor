@@ -1,7 +1,9 @@
 import os.path
 import json
-from typing import Iterable
+import openai
+from jinja2 import Environment, FileSystemLoader
 
+from chat.gpt_agent import GptAgent
 from constants.sentence_type_enum import SentenceType
 
 """
@@ -22,10 +24,54 @@ class LessonManager:
     MIN_SEEN_THRESHOLD = 5
     MIN_WORDS = 20  # Always introduce new words if below
     REQ_HIRA_KATA_WORDS = 100  # Only introduce Kanji above this
+    WORD_WINDOW = 5
+
+    FOCUS_INSTRUCTIONS = {
+        SentenceType.NEW_HIRAKATA: "consists of up to 5 Hiragana or Katakana words of your choosing. Do not use Kanji at all.",
+        SentenceType.MORE_HIRAKATA: "uses any of the these words {{words}}, and one more Hiragana or Katakana word of your choosing. Do not use Kanji at all.",
+        SentenceType.EXISTING_WORD: "uses one or more of these words: {{words}}. Do not use Kanji characters besides those listed here.",
+        SentenceType.NEW_KANJI: "uses one or more of these words: {{words}}, as well as one additional Kanji or your choosing. Do not use Kanji characters besides those listed here or the new one you introduce.",
+    }
 
     def __init__(self):
         self.word_stats = self._load_stats(self._WORD_STATS_PATH)
         self.kanji_stats = self._load_stats(self._KANJI_STATS_PATH)
+
+        with open("openai_key", 'r') as f:
+            openai.api_key = f.read().strip()
+
+        self.jinja_env = Environment(loader=FileSystemLoader("prompts/"))
+        self.tutor = self._create_tutor()
+
+    def _create_sentence_generator(self):
+        # Get focus words
+        sentence_type, focus_words = self.get_focus_words()
+        focus_instructions = self.jinja_env.from_string(self.FOCUS_INSTRUCTIONS[sentence_type]).render(words=', '.join(focus_words))
+
+        # Load main prompt
+        gen_prompt = self.jinja_env.get_template("proposer_prompt.txt").render(focus_instructions=focus_instructions)
+        print(f"Loaded sentence generator prompt:\n{gen_prompt}")
+        return GptAgent(instruction_prompt=gen_prompt)
+
+    def _create_tutor(self):
+        prompt = self.jinja_env.get_template("tutor_prompt.txt").render()
+        print(f"Loaded tutor prompt:\n{prompt}")
+        tutor = GptAgent(instruction_prompt=prompt)
+        return tutor
+
+    def _create_marker(self, student_answer:str, ):
+        prompt = self.jinja_env.get_template("marker_prompt.txt").render(exercise=self.cur_exercise, translation=student_answer)
+        print(f"Loaded marker prompt:\n{prompt}")
+        return GptAgent(instruction_prompt=prompt)
+
+    def check_translation(self, translation):
+        marker = self._create_marker(translation)
+        marker.tell("What is your response to teacher A?", role="system")
+        resp = marker.listen()
+        print(f"Marker response:\n{resp}")
+        self.tutor.tell(resp, role="user", speaker_name="Answer_checker")
+        self.tutor.tell("With this information, how do you respond to the student?", role="system")
+        return self.tutor.listen()
 
     def get_focus_words(self, count=1) -> (SentenceType, list[str]):
         """
@@ -34,7 +80,7 @@ class LessonManager:
         """
         # If not words shown yet ask for a new one
         if len(self.word_stats) < self.MIN_WORDS:
-            return SentenceType.NEW_HIRAKATA, list(self.word_stats.keys())[:count-1]
+            return SentenceType.NEW_HIRAKATA, []
 
         combined_stats = self.word_stats | self.kanji_stats
 
@@ -99,3 +145,29 @@ class LessonManager:
                 return None
 
             return lines[idx].strip()
+
+    def get_next_sentence(self):
+        # Create agent
+        exercise_gen = self._create_sentence_generator()
+
+        # Prompt
+        exercise_gen.tell("Let's do this step by step to make sure we get the correct format:", role="assistant")
+
+        self.cur_exercise = ""
+        for _ in range(5):
+            resp = exercise_gen.listen()
+            self.cur_exercise += f"\n{resp}"
+
+            if "[STOP]" in resp:
+                break
+
+        # TODO validate output format
+        assert "[STOP]" in self.cur_exercise
+        self.cur_exercise = self.cur_exercise.replace("[STOP]", "")
+
+        split = self.cur_exercise.strip().split("\n")
+        sentence = split[0]
+        sentence_disp = json.loads(split[-1])
+        return sentence, sentence_disp
+
+

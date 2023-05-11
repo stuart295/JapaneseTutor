@@ -24,8 +24,7 @@ class JapanesePracticeApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        with open("openai_key", 'r') as f:
-            self.lesson = LessonManager()
+        self.lesson = LessonManager()
 
         self.title("Japanese Practice App")
         self.geometry("1280x720")
@@ -39,8 +38,8 @@ class JapanesePracticeApp(tk.Tk):
 
     def begin_lesson(self):
         self.set_input_enabled(False)
-        opening_response = self.tutor.start_lesson()
-        self.show_tutor_response(opening_response)
+        self.lesson.tutor.tell("[NEXT_EXERCISE]", role="assistant")
+        self.show_next_sentence()
         self.set_input_enabled(True)
 
     def create_widgets(self):
@@ -84,8 +83,19 @@ class JapanesePracticeApp(tk.Tk):
         self.show_student_response(message)
 
         # Get and show tutor response
-        response = self.tutor.speak(message)
-        self.show_tutor_response(response)
+        self.lesson.tutor.tell(message, role="user", speaker_name="student")
+        self.lesson.tutor.tell("How do you response? You can speak freely to the student. If you want to validate the student's answer to this exercise, just output the tag [CHECK]. If you want to fetch and show the next reading exercise, use the tag [NEXT_EXERCISE]", role="system")
+        response = self.lesson.tutor.listen().strip()
+        print(f"Tutor response:\n{response}")
+
+        if "[CHECK]" in response:
+            response = self.lesson.check_translation(message)
+            print(f"Tutor checked response:\n{response}")
+
+        if "[NEXT_EXERCISE]" in response:
+            self.show_next_sentence()
+
+        self.show_tutor_response(response.replace("[NEXT_EXERCISE]", ""))
 
         # Re-enable the input and button
         self.set_input_enabled(True)
@@ -95,13 +105,17 @@ class JapanesePracticeApp(tk.Tk):
             if tag.startswith("tag_ai_"):
                 self.chat_log.tag_delete(tag)
 
-    def show_tutor_response(self, response: list):
+    def show_next_sentence(self):
+        sentence, display = self.lesson.get_next_sentence()
+        self.lesson.tutor.tell(f"Please translate the following sentence: {sentence}", role="assistant")
+
         self.chat_log.configure(state="normal")
         self.chat_log.insert(tk.END, "Tutor\n", "bold")
+        self.chat_log.insert(tk.END, "Please translate the following sentence into English:\n")
 
         self.clear_previous_tags()
 
-        for index, item in enumerate(response):
+        for index, item in enumerate(display):
             character, info = item
             tag_name = f"tag_ai_{index}"
             self.chat_log.insert(tk.END, character, tag_name)
@@ -111,7 +125,16 @@ class JapanesePracticeApp(tk.Tk):
         self.chat_log.insert(tk.END, "\n\n")
         self.chat_log.configure(state="disabled")
         self.chat_log.see(tk.END)
-        self.current_response = response
+        self.current_sentence = display
+
+    def show_tutor_response(self, response: str):
+        self.chat_log.configure(state="normal")
+        self.chat_log.insert(tk.END, "Tutor\n", "bold")
+        self.chat_log.insert(tk.END, response)
+
+        self.chat_log.insert(tk.END, "\n\n")
+        self.chat_log.configure(state="disabled")
+        self.chat_log.see(tk.END)
 
 
     def show_student_response(self, message: str):
@@ -129,7 +152,7 @@ class JapanesePracticeApp(tk.Tk):
             return
 
         tag_index = int(tag_index_str)
-        _, info_text = self.current_response[tag_index]
+        _, info_text = self.current_sentence[tag_index]
 
         if info_text:
             # Reset the background color of the previously highlighted tag

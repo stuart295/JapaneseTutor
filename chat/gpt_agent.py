@@ -5,7 +5,7 @@ from chat.base_agent import BaseAgent
 
 class GptAgent(BaseAgent):
 
-    def __init__(self, agent_name: str, instruction_prompt=None, gpt_model="gpt-4"):
+    def __init__(self, agent_name: str = None, instruction_prompt=None, gpt_model="gpt-4"):
         super().__init__()
         self.agent_name = agent_name
         self.gpt_model = gpt_model
@@ -29,3 +29,6 @@ class GptAgent(BaseAgent):
 
         self.messages.append(response.choices[0]["message"])
         return response.choices[0]["message"]["content"].strip()
+
+    def rewind(self, to_message_idx: int):
+        self.messages = self.messages[:to_message_idx+1]

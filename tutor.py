@@ -10,15 +10,13 @@ class Tutor:
     _KANJI_PATH = './data/kanji_freq_list.txt'
     _TEMPERATURE = 0.7
 
-
-
     def __init__(self, openai_key):
         openai.api_key = openai_key
         self.messages = []
         self.lesson_stats = self.load_lesson_stats()
 
         # Load initial prompt
-        with open("./prompts/japanese_tutor_system_prompt.txt", 'r', encoding="utf-8") as f:
+        with open("prompts/proposer_prompt.txt", 'r', encoding="utf-8") as f:
             self.messages.append({"role": "system", "content": f.read().strip()})
 
         self.messages.append({"role": "system", "content": f"User stats:\n{json.dumps(self.lesson_stats)}"})
