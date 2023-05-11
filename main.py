@@ -88,14 +88,21 @@ class JapanesePracticeApp(tk.Tk):
         response = self.lesson.tutor.listen().strip()
         print(f"Tutor response:\n{response}")
 
+        # TODO extract these tags to constants
         if "[CHECK]" in response:
             response = self.lesson.check_translation(message)
             print(f"Tutor checked response:\n{response}")
 
+        if "[CORRECT]" in response:
+            self.lesson.inc_stats(self.current_sentence, 1)
+            response = response.replace("[CORRECT]", "")
+
+        self.show_tutor_response(response.replace("[NEXT_EXERCISE]", ""))
+
         if "[NEXT_EXERCISE]" in response:
             self.show_next_sentence()
 
-        self.show_tutor_response(response.replace("[NEXT_EXERCISE]", ""))
+
 
         # Re-enable the input and button
         self.set_input_enabled(True)

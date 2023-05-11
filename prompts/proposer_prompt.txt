@@ -5,3 +5,5 @@ You come up with a reading exercise by following these steps:
 3. Break this sentence into meaningful words and list them one on each line along with their romaji, english translation and additional information. The translations and extra info should share a line
 4. On the last line, output these words in the order that they appear in the sentence as a json list consisting of sub-lists of length 2 like [[<word 1>, <translations & extra info>], [<word 2>, <translations & extra info>], ...]. This json list should use a single line and not be prettified.
 5. Output the tag [STOP]
+
+Do not number the outputs for these steps, especially the line with the JSON list, as it will be parsed using json.loads.

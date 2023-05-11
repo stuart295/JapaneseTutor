@@ -16,8 +16,7 @@ from constants.sentence_type_enum import SentenceType
    """
 
 class LessonManager:
-    _KANJI_STATS_PATH = './data/kanji_stats.json'
-    _WORD_STATS_PATH = './data/other_stats.json'
+    _WORD_STATS_PATH = './data/word_stats.json'
     _KANJI_PATH = './data/kanji_freq_list.txt'
 
     ACCURACY_THRESHOLD = 0.8
@@ -35,7 +34,6 @@ class LessonManager:
 
     def __init__(self):
         self.word_stats = self._load_stats(self._WORD_STATS_PATH)
-        self.kanji_stats = self._load_stats(self._KANJI_STATS_PATH)
 
         with open("openai_key", 'r') as f:
             openai.api_key = f.read().strip()
@@ -80,41 +78,38 @@ class LessonManager:
         """
         # If not words shown yet ask for a new one
         if len(self.word_stats) < self.MIN_WORDS:
+            print("Less that min words: Introduce new Hiragana or Katakana")
             return SentenceType.NEW_HIRAKATA, []
 
-        combined_stats = self.word_stats | self.kanji_stats
-
         # Calculate accuracies
-        accuracies = [[c, correct / seen] if seen else [c, 0.0] for c, (seen, correct) in combined_stats.items()]
+        accuracies = [[c, correct / seen] if seen else [c, 0.0] for c, (seen, correct) in self.word_stats.items()]
 
         # Sort from lowest to highest
         accuracies = sorted(accuracies, key=lambda x: x[1])
 
         # If at least one is below 90% accurate, practice it
         if accuracies[0][1] < self.ACCURACY_THRESHOLD:
+            print("Below accuracy threshold: Practice old words")
             return SentenceType.EXISTING_WORD, [c for c, _ in accuracies[:count]]
 
         # Otherwise check seen count
-        seen_counts = sorted([[c, seen] for c, (seen, correct) in combined_stats.items()], key=lambda x: x[1])
+        seen_counts = sorted([[c, seen] for c, (seen, correct) in self.word_stats.items()], key=lambda x: x[1])
 
         # If at least one is below the seen threshold, practice it
         if seen_counts[0][1] < self.MIN_SEEN_THRESHOLD:
+            print("Below seen threshold: Practice old words")
             return SentenceType.EXISTING_WORD, [c for c, _ in seen_counts[:count]]
 
         # If all else is fine, introduce a new character
-        # Hiragana and Katakana only
         if len(self.word_stats) < self.REQ_HIRA_KATA_WORDS:
+            # Hiragana and Katakana only
+            print("Introduce more hiragana or katakana")
             return SentenceType.MORE_HIRAKATA, list(self.word_stats.keys())[:count - 1]
+        else:
+            # Kanji
+            print("Introduce new kanji")
+            return SentenceType.NEW_KANJI, [c for c, _ in seen_counts[:count - 1]]
 
-        # Kanji
-        next_kanji = self._load_kanji(len(self.kanji_stats))
-
-        if next_kanji:
-            self.kanji_stats[next_kanji] = (0, 0)
-            return SentenceType.NEW_KANJI, [c for c, _ in seen_counts[:count - 1]] + [next_kanji]
-
-        # Final guard: Return least seen
-        return SentenceType.EXISTING_WORD, [c for c, _ in seen_counts[:count]]
 
     def _load_stats(self, stats_path: str):
         """
@@ -135,9 +130,6 @@ class LessonManager:
         with open(self._WORD_STATS_PATH, 'w') as f:
             json.dump(self.word_stats, f)
 
-        with open(self._KANJI_STATS_PATH, 'w') as f:
-            json.dump(self.kanji_stats, f)
-
     def _load_kanji(self, idx):
         with open(self._KANJI_PATH, 'r', encoding='utf-8') as f:
             lines = f.readlines()
@@ -145,6 +137,14 @@ class LessonManager:
                 return None
 
             return lines[idx].strip()
+
+    def inc_stats(self, exercise: list, stat_idx: int):
+        for word, *_ in exercise:
+            if word in self.word_stats:
+                self.word_stats[word][stat_idx] += 1
+            else:
+                self.word_stats[word] = [1, 0]
+        self._save_stats()
 
     def get_next_sentence(self):
         # Create agent
@@ -168,6 +168,8 @@ class LessonManager:
         split = self.cur_exercise.strip().split("\n")
         sentence = split[0]
         sentence_disp = json.loads(split[-1])
+        self.inc_stats(sentence_disp, 0)
+
         return sentence, sentence_disp
 
 
